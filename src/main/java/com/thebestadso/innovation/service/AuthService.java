@@ -6,6 +6,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import com.thebestadso.innovation.dto.HttpGlobalResponseDTO;
+import com.thebestadso.innovation.dto.LoginRequestDTO;
 import com.thebestadso.innovation.dto.LoginResponseDTO;
 import com.thebestadso.innovation.dto.RegisterRequestDTO;
 import com.thebestadso.innovation.dto.UserDTO;
@@ -57,6 +58,35 @@ public class AuthService {
         response.setMessage("Token refrescado correctamente");
         response.setData(refresh);
 
+        return response;
+    }
+
+    /**
+     * Método para iniciar sesión: valida usuario y clave y genera un jwt
+     *
+     * @param request username y password
+     * @return respuesta con el jwt, o data null si las credenciales no son válidas
+     */
+    public HttpGlobalResponseDTO<LoginResponseDTO> login(LoginRequestDTO request) {
+        HttpGlobalResponseDTO<LoginResponseDTO> response = new HttpGlobalResponseDTO<>();
+
+        Optional<Users> userFound = userRepository.findByUsername(request.getUsername());
+
+        // Mismo mensaje si no existe el usuario o si la clave es incorrecta,
+        // así no le damos pistas a un atacante sobre qué usuarios existen
+        if (userFound.isEmpty()
+                || !passwordEncoder.matches(request.getPassword(), userFound.get().getPassword())) {
+            response.setMessage("Usuario o contraseña incorrectos");
+            return response;
+        }
+
+        Users user = userFound.get();
+
+        LoginResponseDTO login = new LoginResponseDTO();
+        login.setJwt(jwtService.generateToken(user.getId(), user.getUsername(), user.getRolId()));
+
+        response.setMessage("Inicio de sesión exitoso");
+        response.setData(login);
         return response;
     }
 
